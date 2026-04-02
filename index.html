@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>SRI SATHYA XEROX POS</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @media print {
+      body {
+        background: white;
+        padding: 0;
+        margin: 0;
+      }
+
+      .no-print {
+        display: none !important;
+      }
+
+      .print-only {
+        display: block !important;
+      }
+
+      .receipt-container {
+        box-shadow: none !important;
+        border: none !important;
+        width: 100%;
+        max-width: 100%;
+        margin: 0;
+        padding: 0;
+      }
+
+      .border-b-2 {
+        border-bottom-width: 2px !important;
+      }
+
+      .border-t-2 {
+        border-top-width: 2px !important;
+      }
+
+      .bg-gray-50 {
+        background-color: #f9fafb !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .bg-gray-200 {
+        background-color: #e5e7eb !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+
+      .bg-gray-800 {
+        background-color: #1f2937 !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        color: white !important;
+      }
+    }
+
+    @media screen {
+      .print-only {
+        display: none !important;
+      }
+    }
+
+    .active-tab {
+      background: #2563eb;
+      color: white;
+      border-color: #2563eb;
+    }
+
+    /* Custom scrollbar for receipt area */
+    .custom-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .custom-scroll::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-100 text-gray-800 font-sans h-screen flex flex-col overflow-hidden">
+
+  <!-- Top Navigation (No Print) -->
+  <nav class="bg-blue-800 text-white p-4 shadow-md flex justify-between items-center no-print">
+    <div class="flex items-center gap-3">
+      <img src="logo.jpg" alt="Logo"
+        class="h-12 w-auto object-contain mix-blend-screen brightness-110 contrast-125"
+        onerror="this.onerror=null; this.outerHTML='<div class=&quot;bg-white text-blue-800 w-8 h-8 rounded flex items-center justify-center font-bold text-xl&quot; title=&quot;Please save your logo as logo.jpg in this folder&quot;>S</div>';">
+      <h1 class="text-xl font-bold tracking-wide">SRI SATHYA XEROX POS</h1>
+    </div>
+    <div class="flex items-center gap-4">
+      <button id="adminSettingsBtn" onclick="openAdminSettings()" class="hidden bg-gray-600 hover:bg-gray-700 font-bold px-4 py-2 rounded shadow flex items-center gap-2 transition text-sm">
+          ⚙️ Settings
+      </button>
+      <button onclick="openReportsModal()"
+        class="bg-indigo-600 hover:bg-indigo-700 font-bold px-4 py-2 rounded shadow flex items-center gap-2 transition text-sm">
+        📊 Reports
+      </button>
+      <button onclick="logout()" class="bg-red-500 hover:bg-red-600 font-bold px-4 py-2 rounded shadow flex items-center gap-2 transition text-sm">
+          🚪 Logout <span id="currentUserLabel" class="text-xs font-normal ml-1 opacity-80 uppercase tracking-widest hidden sm:inline"></span>
+      </button>
+      <label class="font-semibold text-sm hidden lg:block">Select Branch:</label>
+      <select id="branchSelector" onchange="changeBranch()"
+        class="bg-white text-gray-800 border border-gray-300 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 cursor-pointer font-semibold shadow-sm">
+        <option value="branch2">Branch 2 (Peelamedu)</option>
+        <option value="branch1">Branch 1 (Anna Nagar)</option>
+      </select>
+    </div>
+  </nav>
+
+  <!-- Main Workspace -->
+  <div class="flex-1 overflow-hidden flex flex-col md:flex-row no-print relative">
+
+    <!-- LEFT PANEL: Controls & Inputs -->
+    <div
+      class="w-full md:w-5/12 p-5 overflow-y-auto custom-scroll border-r bg-white flex flex-col gap-6 shadow-md z-10 space-y-2">
+
+      <!-- Customer Details Card -->
+      <div class="bg-gray-50 border border-gray-200 p-4 rounded-xl shadow-sm hover:shadow transition">
+        <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3">Customer Details</h2>
+        <div class="grid grid-cols-2 gap-3">
+          <input id="customerName" placeholder="Customer Name"
+            class="border border-gray-300 p-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none rounded-lg text-sm transition">
+          <div class="flex shadow-sm rounded-lg">
+            <select id="countryCode" class="border border-gray-300 border-r-0 p-2 focus:ring-2 focus:ring-blue-400 bg-gray-50 text-xs outline-none rounded-l-lg transition w-[85px] font-bold text-gray-700">
+               <option value="91">+91 (IN)</option>
+            </select>
+            <input id="customerMobile" placeholder="Mobile Number"
+              class="w-full border border-gray-300 p-2 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none rounded-r-lg text-sm transition font-medium">
+          </div>
+        </div>
+      </div>
+
+      <!-- Add Item Card -->
+      <div class="bg-blue-50 border border-blue-100 p-4 rounded-xl shadow-sm hover:shadow transition">
+        <h2 class="text-xs font-bold text-blue-600 uppercase tracking-wider mb-3">Add Bill Item</h2>
+
+        <input id="search" onkeyup="filterItems()" placeholder="🔍 Quick Search item..."
+          class="w-full p-2.5 border border-gray-300 rounded-lg mb-3 focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none text-sm transition shadow-sm">
+
+        <div class="flex gap-2 mb-3">
+          <button onclick="setCategory('xerox', this)"
+            class="tab active-tab flex-1 p-2 rounded-lg border border-gray-300 font-semibold text-sm transition shadow-sm bg-white text-gray-600 hover:bg-gray-50">Xerox
+            & Serv.</button>
+          <button onclick="setCategory('stationery', this)"
+            class="tab flex-1 p-2 border border-gray-300 rounded-lg font-semibold text-sm transition shadow-sm bg-white text-gray-600 hover:bg-gray-50">Stationery</button>
+        </div>
+
+        <select id="item" onchange="autoFillPrice()"
+          class="w-full p-2.5 border border-gray-300 rounded-lg mb-3 bg-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none text-sm transition shadow-sm font-medium text-gray-700"></select>
+
+        <div class="grid grid-cols-2 gap-3 mb-3">
+          <input id="price" type="number" placeholder="Unit Price (₹)"
+            class="border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none text-sm transition shadow-sm">
+          <input id="qty" type="number" placeholder="Quantity/Copies"
+            class="border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none text-sm transition shadow-sm">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <select id="discountType"
+            class="border border-gray-300 p-2.5 rounded-lg bg-white focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none text-sm transition shadow-sm cursor-pointer">
+            <option value="none">No Discount</option>
+            <option value="amount">₹ Discount Amt</option>
+            <option value="percent">% Discount</option>
+          </select>
+          <input id="discountValue" type="number" placeholder="Discount Value"
+            class="border border-gray-300 p-2.5 rounded-lg focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none text-sm transition shadow-sm">
+        </div>
+
+        <button onclick="addItem()"
+          class="bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 w-full rounded-lg shadow-md transition transform hover:-translate-y-0.5 active:translate-y-0 text-lg">
+          + Add Item to Bill
+        </button>
+      </div>
+
+      <!-- Settings Card -->
+      <div class="bg-gray-50 border border-gray-200 p-4 rounded-xl shadow-sm hover:shadow transition">
+        <div class="flex justify-between items-center">
+          <h2 class="text-xs font-bold text-gray-500 uppercase tracking-wider">Apply GST (18%)</h2>
+          <label class="inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="gstToggle" checked class="sr-only peer" onchange="toggleGST()">
+            <div
+              class="w-11 h-6 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 relative">
+            </div>
+          </label>
+        </div>
+      </div>
+
+      <!-- Custom Item Card -->
+      <div class="bg-orange-50 border border-orange-100 p-4 rounded-xl shadow-sm hover:shadow transition">
+        <h2 class="text-xs font-bold text-orange-600 uppercase tracking-wider mb-3">Save Custom Item (For Future)</h2>
+        <div class="flex gap-2">
+          <input id="customItem" placeholder="✍️ Custom Item Name"
+            class="border border-gray-300 p-2 text-sm rounded-lg flex-1 outline-none focus:ring-2 focus:ring-orange-400 focus:border-orange-400 shadow-sm">
+          <button onclick="saveCustomItem()"
+            class="bg-orange-500 hover:bg-orange-600 text-white px-5 py-2 font-semibold rounded-lg shadow-sm transition">
+            Save
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RIGHT PANEL: Receipt Preview -->
+    <div
+      class="w-full md:w-7/12 bg-gray-200 p-4 md:p-6 lg:p-8 flex justify-center overflow-y-auto custom-scroll relative">
+      <!-- Floating Actions -->
+      <div class="absolute top-6 right-6 flex gap-3 z-20 no-print">
+        <button onclick="clearBill()"
+          class="bg-white text-red-600 hover:bg-red-50 px-4 py-2 rounded-lg font-bold text-sm shadow-md transition border border-gray-200 flex items-center gap-2">
+          🗑️ Clear Bill
+        </button>
+        <button onclick="sendWhatsApp()"
+          class="bg-[#25D366] text-white hover:bg-green-600 px-4 py-2 rounded-lg font-bold shadow-md transition flex items-center gap-2">
+          💬 WhatsApp
+        </button>
+        <button onclick="printReceipt()"
+          class="bg-blue-600 text-white hover:bg-blue-700 px-5 py-2 rounded-lg font-bold shadow-lg transition flex items-center gap-2 transform hover:scale-105">
+          🖨️ Print
+        </button>
+      </div>
+
+      <!-- The Actual Receipt Document -->
+      <!-- The Actual Receipt Document -->
+      <div id="receiptDocument"
+        class="bg-white shadow-2xl w-full max-w-3xl min-h-[800px] border border-gray-300 receipt-container flex flex-col md:mt-0 relative overflow-hidden text-gray-800">
+
+        <!-- Top Decorative Shapes -->
+        <div
+          class="absolute top-0 right-0 w-3/4 h-56 bg-orange-500 transform origin-top-right skew-y-6 translate-x-10 -translate-y-16 z-0">
+        </div>
+
+        <!-- Deep Blue Banner -->
+        <div class="relative z-10 w-full bg-[#1e2759] text-white p-8 pb-12 shadow-lg"
+          style="clip-path: polygon(0 0, 100% 0, 100% 70%, 0 100%);">
+          <h1 class="text-4xl font-black tracking-widest uppercase mb-2 drop-shadow-md">INVOICE</h1>
+          <div class="flex flex-col items-start gap-1">
+            <img src="logo.jpg" class="h-24 w-auto object-contain mix-blend-screen brightness-110 contrast-125 drop-shadow-lg transform -translate-x-2" onerror="this.style.display='none'">
+            <span id="receiptHeaderCompanyName" class="hidden">SRI SATHYA XEROX</span>
+          </div>
+
+          <div class="mt-6 text-sm font-medium opacity-90 tracking-wide">
+            <p id="receiptInvoiceNoStr">INVOICE NO: 1234</p>
+            <p id="receiptDateStr">17th May, 2023</p>
+            <p id="receiptGSTIN" class="mt-2 text-[#fb923c] font-black text-xs tracking-widest bg-[#1a224d] px-2 py-0.5 inline-block rounded border border-[#fb923c] shadow-sm">GSTIN: <span id="gstinValue"></span></p>
+          </div>
+        </div>
+
+        <!-- Invoice To -->
+        <div class="px-10 flex justify-end -mt-6 relative z-20">
+          <div class="bg-white p-4 text-right min-w-[250px] font-sans">
+            <p class="text-sm font-extrabold uppercase text-gray-900 mb-1">Invoice to:</p>
+            <p id="receiptCustomerName" class="text-2xl font-black text-gray-900">Cash Customer</p>
+            <p id="receiptCustomerMobile" class="text-sm text-gray-600 mt-1"></p>
+          </div>
+        </div>
+
+        <!-- Items Table -->
+        <div class="px-10 py-6 flex-1 text-sm z-10">
+          <table class="w-full text-left border-collapse" id="printTable">
+            <thead>
+              <tr class="bg-[#1e2759] text-white font-bold uppercase text-xs tracking-wider">
+                <th class="py-3 px-3 w-12 text-center rounded-l">#</th>
+                <th class="py-3 px-3">Description</th>
+                <th class="py-3 px-3 text-center">Qty</th>
+                <th class="py-3 px-3 text-right">Cost</th>
+                <th class="py-3 px-3 text-right">Disc</th>
+                <th class="py-3 px-3 text-right">Subtotal</th>
+                <th class="py-3 px-3 text-center no-print w-10 border-l border-[#2e3769] rounded-r">Act</th>
+              </tr>
+            </thead>
+            <tbody id="list" class="divide-y divide-gray-100">
+              <!-- Items go here -->
+            </tbody>
+          </table>
+          <div id="emptyCart"
+            class="text-center py-10 tracking-widest text-gray-400 font-bold uppercase no-print border-b border-gray-200">
+            Bill is empty
+          </div>
+        </div>
+
+        <!-- Bottom Section -->
+        <div class="px-10 pb-12 flex justify-between gap-10 z-10 mt-auto">
+          <!-- Details (Left) -->
+          <div class="w-1/2 flex flex-col gap-8">
+            <!-- Payment -->
+            <div>
+              <h3 class="text-sm font-black uppercase text-gray-900 mb-3 tracking-widest">PAYMENT DETAILS:</h3>
+              <div class="text-xs text-gray-600 leading-relaxed font-bold">
+                <p>UPI ID:<br><span class="font-normal text-gray-800">srisathyaxerox@upi</span></p>
+                <p class="mt-2">Payment Method:<br><span class="font-normal text-gray-800">Cash / Online</span></p>
+              </div>
+            </div>
+
+            <!-- Contact Us -->
+            <div id="receiptContactContainer">
+              <h3 class="text-sm font-black uppercase text-gray-900 mb-3 tracking-widest">CONTACT US</h3>
+              <div class="text-xs text-gray-600 flex flex-col gap-3 font-medium">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-6 h-6 flex items-center justify-center bg-[#1e2759] text-white rounded-full flex-shrink-0 text-[10px]">
+                    📞</div>
+                  <span id="contactPhones">+123-456-7890</span>
+                </div>
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-6 h-6 flex items-center justify-center bg-[#1e2759] text-white rounded-full flex-shrink-0 text-[10px]">
+                    ✉️</div>
+                  <span id="contactEmail">hello@reallygreatsite.com</span>
+                </div>
+                <div class="flex items-center gap-3">
+                  <div
+                    class="w-6 h-6 flex items-center justify-center bg-[#1e2759] text-white rounded-full flex-shrink-0 text-[10px]">
+                    📍</div>
+                  <span id="contactAddress">123 Anywhere St., Any City</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Totals (Right) -->
+          <div class="w-1/2 flex flex-col items-end">
+            <div class="w-full max-w-[280px]">
+              <div class="flex justify-between py-2 px-4 text-sm font-bold text-gray-800">
+                <span>Subtotal</span>
+                <span id="subtotal">₹ 0.00</span>
+              </div>
+              <div id="gstRow" class="flex justify-between py-2 px-4 text-sm font-bold bg-gray-200 text-gray-800">
+                <span>Tax (18%)</span>
+                <span id="gstTotal">₹ 0.00</span>
+              </div>
+              <div
+                class="flex justify-between py-3 px-4 mt-2 bg-[#1e2759] text-white text-lg font-black tracking-widest shadow-md">
+                <span>TOTAL</span>
+                <span id="total">₹ 0.00</span>
+              </div>
+            </div>
+
+            <!-- Signature & Footer -->
+            <div class="mt-auto pt-10 text-center w-full max-w-[200px]">
+              <h2 class="text-2xl font-black text-gray-900 mb-2">Thank You!</h2>
+              <div class="border-b-2 border-gray-600 mb-2 w-full h-16">
+                <!-- Empty space for seal/stamp -->
+              </div>
+              <p class="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Authorized Seal</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Decorative -->
+        <div class="absolute bottom-0 left-0 w-full h-16 pointer-events-none z-0 overflow-hidden">
+          <div
+            class="absolute bottom-0 left-1/4 w-3/4 h-12 bg-orange-500 transform -skew-y-3 origin-bottom-left translate-y-4">
+          </div>
+          <div class="absolute bottom-0 left-0 w-full h-4 bg-[#1e2759]"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Print overlay (only visible when printing, isolates the receipt) -->
+  <div class="print-only fixed inset-0 z-50 bg-white flex justify-center p-0 m-0 w-full h-full">
+    <div id="printArea" class="w-full max-w-3xl"></div>
+  </div>
+
+  <!-- Daily Reports Modal -->
+  <div id="reportsModal"
+    class="hidden fixed inset-0 bg-black bg-opacity-60 z-[100] flex items-center justify-center no-print">
+    <div class="bg-white max-w-4xl w-full rounded-xl shadow-2xl p-6 flex flex-col h-[80vh] m-4">
+      <div class="flex justify-between items-center border-b pb-4 mb-4">
+        <h2 class="text-2xl font-black text-gray-800">📊 Daily Reports</h2>
+        <button onclick="closeReportsModal()"
+          class="text-gray-500 hover:text-red-500 font-bold text-3xl px-2 leading-none">&times;</button>
+      </div>
+
+      <div class="flex justify-between items-center mb-4">
+        <div class="flex gap-4 items-end">
+          <div>
+            <label class="text-sm font-bold text-gray-600">Select Date:</label>
+            <input type="date" id="reportDate" class="border p-2 rounded ml-2 font-medium" onchange="loadReports()">
+          </div>
+          <div id="adminFilterDiv" class="hidden">
+            <label class="text-sm font-bold text-gray-600">Employee:</label>
+            <select id="reportEmpFilter" class="border p-2 rounded ml-2 font-medium" onchange="loadReports()">
+                <option value="ALL">All</option>
+                <option value="admin">Admin</option>
+            </select>
+          </div>
+        </div>
+        <button onclick="exportToCSV()"
+          class="bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded shadow flex items-center gap-2 transition">
+          ⬇️ Export to CSV
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto border rounded-xl shadow-inner bg-gray-50 p-4 custom-scroll">
+        <table class="w-full text-left text-sm" id="reportsTable">
+          <thead>
+            <tr class="bg-gray-800 text-white font-bold tracking-wider text-xs uppercase">
+              <th class="p-3 rounded-tl">Time</th>
+              <th class="p-3">Invoice No</th>
+              <th class="p-3">Customer</th>
+              <th class="p-3 text-right">Subtotal</th>
+              <th class="p-3 text-right">GST</th>
+              <th class="p-3 text-right">Grand Total</th>
+              <th class="p-3 text-center rounded-tr no-print">Action</th>
+            </tr>
+          </thead>
+          <tbody id="reportsList" class="divide-y divide-gray-200 bg-white">
+            <!-- Report items injected here -->
+          </tbody>
+        </table>
+        <div id="noReports" class="text-center py-10 text-gray-400 font-bold hidden tracking-widest uppercase">No
+          transactions for this date.</div>
+      </div>
+
+      <div class="mt-4 pt-4 border-t flex justify-end text-right">
+        <div
+          class="text-xl font-bold bg-blue-50 text-[#1e2759] px-6 py-3 rounded-lg border border-blue-100 shadow-sm inline-block">
+          <span class="text-xs font-black tracking-widest uppercase text-blue-900 block mb-1 opacity-70">Total Sales
+            Generated</span>
+          <span id="reportTotalSales" class="text-3xl">₹ 0.00</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+
+  <!-- Login Screen Overlay -->
+  <div id="loginOverlay" class="fixed inset-0 bg-[#1e2759] z-[200] flex items-center justify-center flex-col transition-opacity duration-300">
+      <div class="bg-white p-8 rounded-2xl shadow-2xl max-w-sm w-full text-center">
+          <img src="logo.jpg" class="h-24 w-auto mx-auto mb-4 object-contain mix-blend-multiply" onerror="this.style.display='none'">
+          <h2 class="text-2xl font-black text-gray-800 mb-6 tracking-wide">SYSTEM LOGIN</h2>
+          <div class="text-left mb-4">
+              <label class="block text-sm font-bold text-gray-600 mb-1">Username</label>
+              <input type="text" id="loginUsername" class="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none uppercase font-bold text-gray-800" placeholder="admin or emp1">
+          </div>
+          <div class="text-left mb-6">
+              <label class="block text-sm font-bold text-gray-600 mb-1">Password</label>
+              <input type="password" id="loginPassword" class="w-full border border-gray-300 p-3 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Enter password">
+          </div>
+          <button onclick="attemptLogin()" class="w-full bg-blue-600 hover:bg-blue-700 text-white p-3 rounded-lg font-bold shadow-md transition transform hover:-translate-y-0.5 mt-2">LOGIN TO REGISTER</button>
+          <p id="loginError" class="text-red-500 font-bold mt-4 text-sm hidden">Invalid Username or Password!</p>
+      </div>
+      <p class="text-blue-200 mt-8 font-semibold tracking-widest text-xs uppercase opacity-50">SRI SATHYA XEROX SECURE POS</p>
+  </div>
+
+  <!-- Admin Settings Modal -->
+  <div id="adminSettingsModal" class="hidden fixed inset-0 bg-black bg-opacity-60 z-[150] flex items-center justify-center no-print">
+      <div class="bg-white p-6 rounded-xl shadow-lg max-w-sm w-full">
+          <h2 class="text-xl font-bold mb-4">⚙️ Admin Settings</h2>
+          <div class="mb-4">
+              <label class="block text-sm font-bold text-gray-600 mb-1">New Admin Password</label>
+              <input type="password" id="newAdminPassword" class="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none">
+          </div>
+          <div class="flex justify-end gap-2">
+              <button onclick="document.getElementById('adminSettingsModal').classList.add('hidden')" class="px-4 py-2 text-gray-600 font-bold hover:bg-gray-100 rounded">Cancel</button>
+              <button onclick="saveAdminPassword()" class="px-4 py-2 bg-blue-600 text-white font-bold rounded shadow hover:bg-blue-700">Save Password</button>
+          </div>
+      </div>
+  </div>
+
+  <script>
+    // Clone the receipt area perfectly for printing
+    window.addEventListener('beforeprint', () => {
+      document.getElementById('printArea').innerHTML = document.getElementById('receiptDocument').outerHTML;
+    });
+  </script>
+
+</body>
+
+</html>
