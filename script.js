@@ -4,6 +4,8 @@ let subtotal = 0;
 let gstTotal = 0;
 let currentCategory = "xerox";
 let billItems = [];
+let currentInvoiceNo = "";
+let currentDateStr = "";
 
 // Branch Data Configurations
 const branchData = {
@@ -223,12 +225,14 @@ function initApp() {
 function generateInvoiceNo() {
   let counter = localStorage.getItem("invoiceCounter");
   if (!counter) counter = 10001; // Start at 10001 if first time
-  document.getElementById("receiptInvoiceNoStr").innerText = `INVOICE NO: ${counter}`;
+  currentInvoiceNo = counter.toString();
+  document.getElementById("receiptInvoiceNoStr").textContent = `INVOICE NO: ${counter}`;
 }
 
 function updateDate() {
   const d = new Date();
-  document.getElementById("receiptDateStr").innerText = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+  currentDateStr = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  document.getElementById("receiptDateStr").textContent = currentDateStr;
 }
 
 // BRANCH MANAGEMENT
@@ -236,13 +240,13 @@ function changeBranch() {
   const selected = document.getElementById("branchSelector").value;
   const data = branchData[selected];
 
-  document.getElementById("receiptHeaderCompanyName").innerText = data.name;
+  document.getElementById("receiptHeaderCompanyName").textContent = data.name;
 
   // Render bottom contact section dynamically
-  document.getElementById("contactPhones").innerText = data.phones;
-  document.getElementById("contactEmail").innerText = data.email;
-  document.getElementById("contactAddress").innerText = data.address;
-  document.getElementById("gstinValue").innerText = data.gstin;
+  document.getElementById("contactPhones").textContent = data.phones;
+  document.getElementById("contactEmail").textContent = data.email;
+  document.getElementById("contactAddress").textContent = data.address;
+  document.getElementById("gstinValue").textContent = data.gstin;
 }
 
 // LOAD POS ITEMS DROPDOWN
@@ -455,7 +459,7 @@ function toggleGST() {
 // SAVE TRANSACTION
 function saveTransaction() {
   let transactions = JSON.parse(localStorage.getItem("dailyTransactions")) || [];
-  let invoiceNo = document.getElementById("receiptInvoiceNoStr").innerText.replace("INVOICE NO: ", "").trim();
+  let invoiceNo = currentInvoiceNo;
 
   // Prevent duplicated saves if printed twice
   if (transactions.some(t => t.invoiceNo === invoiceNo)) return;
@@ -522,9 +526,9 @@ function sendWhatsApp() {
   let fullMobile = countryCode + mobile;
 
   let customerName = document.getElementById("customerName").value.trim() || "Customer";
-  let invoiceNo = document.getElementById("receiptInvoiceNoStr").innerText.replace("INVOICE NO:", "").trim();
-  let dateStr = document.getElementById("receiptDateStr").innerText;
-  let companyName = document.getElementById("receiptHeaderCompanyName").innerText;
+  let invoiceNo = currentInvoiceNo;
+  let dateStr = currentDateStr;
+  let companyName = document.getElementById("receiptHeaderCompanyName").textContent;
   
   let msg = `*${companyName}*\n`;
   msg += `--------------------------\n`;
